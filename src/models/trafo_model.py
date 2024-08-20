@@ -5,13 +5,12 @@ from utils import *
 from subnet_creation import Subnet
 
 class TrafoModel:
-    def __init__(self, voltage_data, undervoltage_data, df_vol, df_p, df_q, df_tr,  trafo_name, network_path):
+    def __init__(self, voltage_data, undervoltage_data, df_vol, df_p, df_q,  trafo_name, network_path):
         self.voltage_data = voltage_data
         self.undervoltage_data = undervoltage_data
         self.df_vol = df_vol
         self.df_p = df_p
         self.df_q = df_q
-        self.df_tr = df_tr
         self.trafo_name = trafo_name
         self.network_path = network_path
         self.feeders = None

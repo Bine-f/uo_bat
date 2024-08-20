@@ -319,6 +319,7 @@ def calculate_slopes(snet, battery_smms, dates, smms_feeder, df_p, df_q, df_vol,
         slopes_smms:
             dataframe with smms for which slopes are calculated as columns, all smms in smms_feeder as index and slopes as rows   
     """    
+
     # choose dates for calibration and slope calculation
     dates_cal_index = np.arange(
         len(dates)//(N_of_dates + 1), len(dates), len(dates)//(N_of_dates + 1))[:-1]
@@ -330,11 +331,11 @@ def calculate_slopes(snet, battery_smms, dates, smms_feeder, df_p, df_q, df_vol,
         slope_df["smm"] = snet.load.smm
         for i in range(len(dates_cal)):
             date = dates_cal[i]
-            try:
-                state_tr = df_trafo.loc[date]
-                snet.ext_grid["vm_pu"] = state_tr.values[0]/230
-            except:
-                pass
+            # try:
+            #     state_tr = df_trafo.loc[date]
+            #     snet.ext_grid["vm_pu"] = state_tr.values[0]/230
+            # except:
+            #     pass
             state_p = df_p.loc[date]
             state_vol = df_vol.loc[date]
             state_q = df_q.loc[date]        

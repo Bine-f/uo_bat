@@ -2,18 +2,17 @@ import pandas as pd
 from utils import *
 
 class Preprocess:
-    def __init__(self, voltage_data, power_data, trafo_data):
+    def __init__(self, voltage_data, power_data = None):
         self.voltage_data = voltage_data
         self.power_data = power_data
-        self.trafo_data = trafo_data
+       
         self.minimal_vol = 150/230
         self.max_diff = 50/230
         self.fillna_method = None
         self.df_vol = None
         self.df_p = None
         self.df_q = None
-        self.df_trafo = None
-    
+        
 
 
     def handle_names(self):
@@ -24,15 +23,13 @@ class Preprocess:
                 dataframe with energy data
             voltage_data:
                 dataframe with voltage data
-            trafo_data:
-                dataframe with transformer data
+            
         """
-        self.handle_names_df_vol()
-        self.handle_names_power_data()
-        if self.trafo_data is not None:
-            self.handle_names_df_tr()
+        self.handle_voltage_data_names()
+        self.handle_power_data_names()
+       
 
-    def handle_names_df_vol(self):
+    def handle_voltage_data_names(self):
         """function changes the column names of the dataframe with energy data, according to code standards
         Args:
         --------
@@ -41,7 +38,7 @@ class Preprocess:
         """    
         self.voltage_data.rename(columns={"DatumUraCET": "date_time","Napetost_L1": "u_1", "Napetost_L2": "u_2", "Napetost_L3": "u_3", 
                                      "Napetost_L123": "u_123", "SMM": "smm","TransformatorskaPostajaSID": "tp_sid"}, inplace=True)
-    def handle_names_power_data(self):
+    def handle_power_data_names(self):
         """function changes the column names of the dataframe with energy data, according to code standards
         Args:
         --------
@@ -49,27 +46,13 @@ class Preprocess:
                 dataframe with energy
         """
         self.power_data.rename(columns={"DatumUraCET": "date_time", "DelovnaMoč": "p", "JalovaMoč": "q" ,"TransformatorskaPostajaSID": "tp_sid", "SMM": "smm",}, inplace=True)
-    def handle_names_df_tr(self):
-        """"function changes the column names of the dataframe with transformer data, according to code standards
-        Args:
-        --------
-            trafo_data:
-
-                dataframe with transformer data
-        """
-        self.trafo_data.rename(columns={"DatumUraCET": "date_time", "TransformatorskaPostajaSID": "tp_sid", "SMM": "smm", "SOM_Napetost_L1": "u_1", "SOM_Napetost_L2": "u_2", "SOM_Napetost_L3": "u_3",
-                                    "SOM_Delovna_moc_P1": "p_1", "SOM_Delovna_moc_P2": "p_2", "SOM_Delovna_moc_P3": "p_3", "SOM_Jalova_moc_Q1" : "q_1", "SOM_Jalova_moc_Q2" : "q_2", "SOM_Jalova_moc_Q3" : "q_3",
-                                    "SOM_Skupna_delovna_moc_P": "p", "SOM_Skupna_jalova_moc_Q": "q",	"SOM_Skupna_navidezna_moc_S": "s"}, inplace=True)
-
+    
     def crop_to_one_year (self):
         """Crops the data to one year, if data is longer than one year"""
-        end_date = self.voltage_data.date_time.max()
-        start_date = end_date - pd.Timedelta("365 days")
-        self.voltage_data = self.voltage_data[(self.voltage_data.date_time >= start_date)]
-        self.power_data = self.power_data[(self.power_data.date_time >= start_date)]
-        if self.trafo_data is not None:
-            self.trafo_data = self.trafo_data[(self.trafo_data.date_time >= start_date)]
-
+        self.end_date = self.voltage_data.date_time.max()
+        self.start_date = self.end_date - pd.Timedelta("365 days")
+        self.voltage_data = self.voltage_data[(self.voltage_data.date_time >= self.start_date)]
+        self.power_data = self.power_data[(self.power_data.date_time >= self.start_date)]
 
     def create_voltage_pivot_table(self):
         """Resamples the power data down to 10 minutes and then up to 10 minutes, creates pivoted dataframe"""
@@ -104,22 +87,22 @@ class Preprocess:
         pivoted_data = pivoted_data.resample('10T', label = "right").mean()
         self.df_q = pivoted_data
     
-    def resample_trafo_data(self):
-        """Resamples the transformer data up to 10 minutes, creates dataframe"""
+    # def resample_trafo_data(self):
+    #     """Resamples the transformer data up to 10 minutes, creates dataframe"""
 
-        if self.df_trafo is None:
-            return None        
-        else:
-            trafo_df = self.df_trafo.copy()
-            trafo_df.index = pd.to_datetime(trafo_df.date_time)
-            trafo_df["u_123"] = trafo_df[["u_1", "u_2", "u_3"]].mean(axis=1)
-            trafo_df = trafo_df[["u_123"]]
-            trafo_df_res = trafo_df.copy()
-            trafo_df_res = trafo_df_res[~trafo_df_res.index.duplicated(keep='first')]
-            trafo_df_res = trafo_df_res.fillna(method='bfill').resample('5T').bfill()
-            trafo_df_res.index = pd.to_datetime(trafo_df_res.index) - pd.Timedelta('5T')
-            trafo_df_res = trafo_df_res.resample('10T', label = "right").mean()
-            self.df_trafo = trafo_df_res
+    #     if self.df_trafo is None:
+    #         return None        
+    #     else:
+    #         trafo_df = self.df_trafo.copy()
+    #         trafo_df.index = pd.to_datetime(trafo_df.date_time)
+    #         trafo_df["u_123"] = trafo_df[["u_1", "u_2", "u_3"]].mean(axis=1)
+    #         trafo_df = trafo_df[["u_123"]]
+    #         trafo_df_res = trafo_df.copy()
+    #         trafo_df_res = trafo_df_res[~trafo_df_res.index.duplicated(keep='first')]
+    #         trafo_df_res = trafo_df_res.fillna(method='bfill').resample('5T').bfill()
+    #         trafo_df_res.index = pd.to_datetime(trafo_df_res.index) - pd.Timedelta('5T')
+    #         trafo_df_res = trafo_df_res.resample('10T', label = "right").mean()
+    #         self.df_trafo = trafo_df_res
     
     def create_pivot_tables(self):
         """Creates pivoted dataframes for power, voltage and transformer data"""
@@ -127,9 +110,18 @@ class Preprocess:
         self.create_power_pivot_table()
         self.create_reactive_power_pivot_table()
         
-    def preprocess_trafo_data(self):
-        """Preprocesses transformer data"""
-        self.resample_trafo_data()
+    def preprocess_powers_create_pivot_tables(self, power_data):
+        """preprocesses power data, removes faulty power data, creates pivoted dataframes for power data
+        Args:
+        --------
+            power_data:
+                dataframe with power data
+        """
+        self.power_data = power_data
+        self.handle_power_data_names()
+        self.crop_to_one_year()
+        self.create_pivot_tables()
+        return self.df_vol, self.df_p, self.df_q
 
     def preprocess_voltages(self):
         """preprocesses voltages, limits minimal voltage to minimal_vol and maximal difference between phases to max_diff
@@ -166,18 +158,45 @@ class Preprocess:
         else:
             undervoltage_data_20_min = undervoltage_data
         self.undervoltage_data = undervoltage_data_20_min
-    
+
+    def is_trafo_suitable_for_battery(self):
+        """Returns True if there are more than 4 datetimes with undervoltage in voltage data"""
+        if self.undervoltage_data is None:
+            return False
+        else:
+            return len(self.undervoltage_data["date_time"].unique()) > 4
 
     def preprocess_data(self):
         """preprocesses voltage, energy and transformer data, removes faulty voltage data
         Creates pivoted dataframes for energy, voltage and transformer data
         """
         self.handle_names()
-        self.crop_to_one_year()
+        self.crop_power_data()
         self.preprocess_voltages()
-        self.create_pivot_tables()
-        self.preprocess_trafo_data()
+        self.create_pivot_tables()        
         self.get_undervoltage_data()
-        return self.voltage_data, self.undervoltage_data, self.df_vol, self.df_p, self.df_q, self.df_trafo	
+        return self.voltage_data, self.undervoltage_data, self.df_vol, self.df_p, self.df_q
+    
+    def crop_voltage_data(self):
+        """Crops voltage data to one year"""
+        self.end_date = self.voltage_data.date_time.max()
+        self.start_date = self.end_date - pd.Timedelta("365 days")
+        self.voltage_data = self.voltage_data[(self.voltage_data.date_time >= self.start_date)]
+    
+    def crop_power_data(self):
+        """Crops power data to one year"""
+        self.power_data = self.power_data[(self.power_data.date_time >= self.start_date)]
+        
+    
+    def preprocess_voltage_data(self):
+        """preprocesses voltage data, removes faulty voltage data, finds undervoltage data, determines if trafo is suitable for battery
+        """
+        self.handle_voltage_data_names()
+        # self.crop_to_one_year()
+        self.crop_voltage_data()
+        self.preprocess_voltages()
+        self.get_undervoltage_data()
+        suitable_for_battery = self.is_trafo_suitable_for_battery()
+        return self.voltage_data, self.undervoltage_data, suitable_for_battery
 
     

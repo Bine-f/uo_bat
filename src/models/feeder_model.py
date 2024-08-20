@@ -34,18 +34,20 @@ class FeederModel():
         self.uv_data_avg = limit_voltage(self.voltage_data, lim_vol = self.lim_vol_avg, average = average)
         self.avg_dates = self.uv_data_avg["date_time"].unique()
 
-   
 
-    def write_undervoltage_data(self):
-        """Writes undervoltage parameters for given feeder to results dataframe"""
-        
-        
+    def write_undervoltage_data(self, empty_battery_columns = False):
+        """Writes undervoltage parameters for given feeder to results dataframe"""        
+        self.feeder_res["Trafo"] = [self.tm.trafo_name]
         self.feeder_res["Feeder"] = [self.feeder_name]
         self.feeder_res["N_of_UV"] = [self.N_of_UV]
         self.feeder_res["N_of_smms"] = [self.N_of_smms]
         self.feeder_res["N_of_smms_with_UV"] = [self.N_of_uv_smms] 
         self.feeder_res["N_of_dates_with_UV"] = [self.N_dates] 
-        # trafo_res_df["Critical_voltage"] = [vol_lim*230] 
+        if empty_battery_columns:
+            self.feeder_res["battery_smm"] = [None]
+            self.feeder_res["battery_capacity"] = [None]
+            self.feeder_res["battery_power"] = [None]
+            self.feeder_res["battery_cycles"] = [None]
        
 
     def calculate_uv_parameters(self):
@@ -65,14 +67,18 @@ class FeederModel():
         """Calculates slopes for given feeder, for battery smm"""
         self.define_and_limit_voltage()
         self.determine_battery_smm()
-        self.slopes = calculate_slopes(self.snet, [self.battery_smm], self.avg_dates,self.smms, self.tm.df_p, self.tm.df_q, self.tm.df_vol)
+        self.slopes = calculate_slopes(self.snet, [self.battery_smm], self.avg_dates, self.smms, self.tm.df_p, self.tm.df_q, self.tm.df_vol)
         
+    def calculate_and_write_uv_data(self, empty_battery_columns = False):  
+        """Calculates undervoltage parameters for given feeder, determines if solving with battery is needed, calculates voltage-power slopes"""
+        self.calculate_uv_parameters()
+        self.write_undervoltage_data(empty_battery_columns)
+        self.suitable_for_battery = self.N_dates > 4
+
     def calculate_uv_data_and_slopes(self):
         """Calculates undervoltage parameters for given feeder, determines if solving with battery is needed, calculates voltage-power slopes"""
         
-        self.calculate_uv_parameters()
-        self.write_undervoltage_data()
-        self.suitable_for_battery = self.N_dates > 4
+        self.calculate_and_write_uv_data()
         if self.suitable_for_battery:
             self.calculate_slopes()
            
