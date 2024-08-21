@@ -161,10 +161,11 @@ class Preprocess:
 
     def is_trafo_suitable_for_battery(self):
         """Returns True if there are more than 4 datetimes with undervoltage in voltage data"""
+        print(self.undervoltage_data)
         if self.undervoltage_data is None:
             return False
         else:
-            return len(self.undervoltage_data["date_time"].unique()) > 4
+            return len(self.undervoltage_data["date_time"].unique()) >= 4
 
     def preprocess_data(self):
         """preprocesses voltage, energy and transformer data, removes faulty voltage data

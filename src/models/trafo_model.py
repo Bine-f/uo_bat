@@ -70,6 +70,18 @@ class TrafoModel:
 
     def create_and_populate_snet(self):
         """Creates subnet of trafo network and populates it with feeders and phases for each row"""
-        self.create_snet()
+        if self.snet is None:
+            self.create_snet()
         self.populate_snet_feeders_phases()
+
+    def percentage_of_voltage_data(self):
+        """Calculates precentage of smms, for which we have voltage data"""
+        smms_voltage = self.voltage_data.smm.unique()
+        smms_snet = self.snet.load.smm.unique()
+        return len(smms_voltage)/len(smms_snet)
+    
+    def is_there_enough_voltage_data(self):
+        """Returns True if we have voltage data for more than 90% of smms"""
+        self.create_snet()
+        return self.percentage_of_voltage_data() > 0.6
         

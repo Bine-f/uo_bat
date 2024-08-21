@@ -73,7 +73,7 @@ class FeederModel():
         """Calculates undervoltage parameters for given feeder, determines if solving with battery is needed, calculates voltage-power slopes"""
         self.calculate_uv_parameters()
         self.write_undervoltage_data(empty_battery_columns)
-        self.suitable_for_battery = self.N_dates > 4
+        self.suitable_for_battery = self.N_dates >= 4
 
     def calculate_uv_data_and_slopes(self):
         """Calculates undervoltage parameters for given feeder, determines if solving with battery is needed, calculates voltage-power slopes"""

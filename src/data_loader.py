@@ -23,7 +23,8 @@ class DataLoader:
         self.voltage_data = None
         self.power_data = None
         self._con = None
-        self.con_string = config.CON_STRING
+        if not load_manual:
+            self.con_string = config.CON_STRING
         self.start = start
         self.end = end
 

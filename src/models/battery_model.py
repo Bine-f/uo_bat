@@ -128,28 +128,28 @@ class BatteryModel:
                         vol1_diff = self.vol_lim*230 - vol1
                     except:
                         vol1 = self.vol_lim
-                        vol1_diff = -np.inf
+                        vol1_diff = -5000
                     try:
                         vol2 = vol_state.loc[vol_state.smm ==
                                              smm].u_2.values[0]
                         vol2_diff = self.vol_lim*230 - vol2
                         if not np.isfinite(vol2):
                             vol2 = self.vol_lim
-                            vol2_diff = -np.inf
+                            vol2_diff = -5000
 
                     except Exception as e:
                         vol2 = self.vol_lim
-                        vol2_diff = -np.inf
+                        vol2_diff = -5000
                     try:
                         vol3 = vol_state.loc[vol_state.smm ==
                                              smm].u_3.values[0]
                         vol3_diff = self.vol_lim*230 - vol3
                         if not np.isfinite(vol3):
                             vol3 = self.vol_lim
-                            vol3_diff = -np.inf
+                            vol3_diff = -5000
                     except:
                         vol3 = self.vol_lim
-                        vol3_diff = -np.inf
+                        vol3_diff = -5000
                     # calculate power for each phase
                     p1 = vol1_diff / vol_slope /3
                     p2 = vol2_diff / vol_slope /3

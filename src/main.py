@@ -29,8 +29,13 @@ dl = DataLoader(load_manual=True,
                 trafo_name=trafo_name[:6]) 
 voltage_data= dl.load_voltage_data()
 pr = Preprocess(voltage_data)
-voltage_data, undervoltage_data, trafo_suitable_for_battery = pr.preprocess_voltage_data(
-)
+voltage_data, undervoltage_data, trafo_suitable_for_battery = pr.preprocess_voltage_data()
+# if trafo_suitable_for_battery:
+#     tm = TrafoModel(voltage_data, undervoltage_data, None, None, None,
+#                    trafo_name, NET_PATH)
+#     print("Trafo suitable for battery")
+#     trafo_suitable_for_battery = tm.is_there_enough_voltage_data()
+#     print(trafo_suitable_for_battery)
 if trafo_suitable_for_battery:
     # There are undervoltages, we need to fix
     power_data = dl.load_power_data()
@@ -48,12 +53,15 @@ if trafo_suitable_for_battery:
             bm.calculate_battery_parameters()
             trafo_res_df = pd.concat([trafo_res_df, fm.feeder_res],
                         ignore_index=True)
+            
         else:
             if fm.suitable_for_battery:
                 bm = BatteryModel(fm)
                 bm.calculate_battery_parameters()
                 battery_res = pd.concat([battery_res, fm.feeder_res],
                                         ignore_index=True)
+    if create_battery_results:
+        print(battery_res)
 else:
     if create_trafo_results:
         tm = TrafoModel(voltage_data, undervoltage_data,None, None, None,
@@ -68,7 +76,6 @@ else:
 
 if create_trafo_results:
     print(trafo_res_df)
-else:
-    print(battery_res)
+
 # except    :
 #     print("Calculation not possible for trafo: " + TRAFO_NAME)
