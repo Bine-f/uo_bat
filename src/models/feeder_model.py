@@ -18,6 +18,7 @@ class FeederModel():
         self.suitable_for_battery = False
         self.slopes = None
         self.bm = None
+        self.enough_voltage_data = self.tm.enough_voltage_data
 
     def define_calibration_lim_vol(self):
         """Defines calibration limit voltage for feeder based on undervoltage data,
@@ -67,7 +68,7 @@ class FeederModel():
         """Calculates slopes for given feeder, for battery smm"""
         self.define_and_limit_voltage()
         self.determine_battery_smm()
-        self.slopes = calculate_slopes(self.snet, [self.battery_smm], self.avg_dates, self.smms, self.tm.df_p, self.tm.df_q, self.tm.df_vol)
+        self.slopes = calculate_slopes(self.snet, [self.battery_smm], self.avg_dates, self.smms, self.tm.df_p, self.tm.df_q, self.tm.df_vol, calibrate = self.enough_voltage_data)
         
     def calculate_and_write_uv_data(self, empty_battery_columns = False):  
         """Calculates undervoltage parameters for given feeder, determines if solving with battery is needed, calculates voltage-power slopes"""

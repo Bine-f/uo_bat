@@ -16,6 +16,8 @@ class TrafoModel:
         self.feeders = None
         self.trafo_res_df = pd.DataFrame()
         self.snet = None
+        self.enough_voltage_data = self.is_there_enough_voltage_data()
+
     
     def create_snet(self):
         """Create pandapower network for trafo"""
@@ -82,6 +84,7 @@ class TrafoModel:
     
     def is_there_enough_voltage_data(self):
         """Returns True if we have voltage data for more than 90% of smms"""
-        self.create_snet()
+        if self.snet is None:
+            self.create_snet()
         return self.percentage_of_voltage_data() > 0.6
         

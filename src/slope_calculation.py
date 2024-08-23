@@ -285,7 +285,7 @@ def calibrate_snet(snet, state_vol, smms_feeder, plot=False, x0=1., t0=0.425, ca
     return opt_trafo_lv, opt_res_f
 
 
-def calculate_slopes(snet, battery_smms, dates, smms_feeder, df_p, df_q, df_vol, df_trafo=None, N_of_dates=4, plot = False):
+def calculate_slopes(snet, battery_smms, dates, smms_feeder, df_p, df_q, df_vol, calibrate = True, N_of_dates=4, plot = False):
     """
     Calculates difference of voltage, when power is decreased by 1 kW at smms at battery_smms.
 
@@ -308,8 +308,8 @@ def calculate_slopes(snet, battery_smms, dates, smms_feeder, df_p, df_q, df_vol,
             dataframe with average reactive power for all smms
         df_vol:
             dataframe with average voltage for all smms
-        df_trafo:
-            dataframe with transformator voltage and power data
+        calibrate:
+            if True, calibrates the network before calculating slopes
         N_of_dates:
             number of dates used for calculation of slopes
         plot:
@@ -340,9 +340,10 @@ def calculate_slopes(snet, battery_smms, dates, smms_feeder, df_p, df_q, df_vol,
             state_vol = df_vol.loc[date]
             state_q = df_q.loc[date]        
             populate_snet(snet, state_p, state_q, warn=False)
-            # calibration            
-            opt_trafo_lv, res_f = calibrate_snet(
-                snet, state_vol, smms_feeder, x0=1., t0=0.425, plot=plot)
+            # calibration         
+            if calibrate:   
+                opt_trafo_lv, res_f = calibrate_snet(
+                    snet, state_vol, smms_feeder, x0=1., t0=0.425, plot=plot)
             run_powerflow(snet, res_factor=res_f, trafo_lv=opt_trafo_lv) 
             # saving initial voltages, simulated with measured power data           
             volts_0 = set_volts(snet, state_vol, warn=False)

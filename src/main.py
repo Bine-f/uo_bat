@@ -31,19 +31,11 @@ voltage_data= dl.load_voltage_data()
 pr = Preprocess(voltage_data)
 voltage_data, undervoltage_data, trafo_suitable_for_battery = pr.preprocess_voltage_data_get_undervoltages()
 if trafo_suitable_for_battery:
-    tm = TrafoModel(voltage_data, undervoltage_data, None, None, None,
-                   trafo_name, NET_PATH)
-    print("Trafo suitable for battery")
-    trafo_suitable_for_battery = tm.is_there_enough_voltage_data()
-    print(trafo_suitable_for_battery)
-if trafo_suitable_for_battery:
     # There are undervoltages, we need to fix
     power_data = dl.load_power_data()
     df_vol, df_p, df_q = pr.preprocess_powers_create_pivot_tables(power_data)
-
     tm = TrafoModel(voltage_data, undervoltage_data, df_vol, df_p, df_q,
-                   trafo_name, NET_PATH)
-    
+                   trafo_name, NET_PATH)    
     tm.create_and_populate_snet()
     for feeder in tm.feeders:
         fm = FeederModel(tm, feeder)
