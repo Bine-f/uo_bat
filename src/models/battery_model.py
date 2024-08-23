@@ -171,13 +171,21 @@ class BatteryModel:
                             powers_list.append(p)
                         else:
                             # if only average voltage is fixed, we sum all powers
-                            powers_list.append(p1 + p2 + p3)
+                            p = p1 + p2 + p3
+                            powers_list.append(p)
                 # For needed power at certain datetime, we take the maximum power from all smms
                 
                 sp_max = max(powers_list)
                 # If power is unrealistic, we set it to 0
-                if np.abs(sp_max) < 100:
-                    soc -= sp_max/6
+                if sp_max < 100:
+                    if charging:
+                        if sp_max < soc*6:
+                            sp_max = soc*6
+                            soc = 0
+                        else:
+                            soc -= sp_max/6
+                    else:
+                        soc -= sp_max/6
                     powers_slope.append(sp_max)
                     dates_uv.append(date)
                     socs.append(soc)

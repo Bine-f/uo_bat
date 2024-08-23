@@ -161,7 +161,6 @@ class Preprocess:
 
     def is_trafo_suitable_for_battery(self):
         """Returns True if there are more than 4 datetimes with undervoltage in voltage data"""
-        print(self.undervoltage_data)
         if self.undervoltage_data is None:
             return False
         else:
@@ -188,8 +187,26 @@ class Preprocess:
         """Crops power data to one year"""
         self.power_data = self.power_data[(self.power_data.date_time >= self.start_date)]
         
+    def remove_smm_from_voltage_and_undevoltage_data(self, smm):
+        """Removess smm from voltage and undervoltage data"""
+        self.voltage_data = self.voltage_data[self.voltage_data.smm != smm]
+        self.undervoltage_data = self.undervoltage_data[self.undervoltage_data.smm != smm]
     
-    def preprocess_voltage_data(self):
+    def remove_asymetric_smms(self):
+        """Checks if there are smms in undervoltage data, that have too asymetric voltages, to be real. Removes them"""
+        smm_counts = self.undervoltage_data["smm"].value_counts()
+        uv_smms = smm_counts[smm_counts > 300].index 
+        # We find smms that have a lot of undervoltage data, and check if they have too asymetric voltages
+        for smm in uv_smms:
+            smm_data = self.voltage_data[self.voltage_data["smm"] == smm]
+            avg1, avg2, avg3 = np.average(smm_data.u_1), np.average(smm_data.u_2), np.average(smm_data.u_3)
+            sorted_averages = np.sort([avg1, avg2, avg3])
+            # If difference between average of two highest phases and lowest phase is too high, we remove the whole smm data
+            if (sorted_averages[1] + sorted_averages[2])/2 - sorted_averages[0] > 7:
+                self.remove_smm_from_voltage_and_undevoltage_data(smm)
+                print(f"Removed smm {smm} from voltage and undervoltage data")
+
+    def preprocess_voltage_data_get_undervoltages(self):
         """preprocesses voltage data, removes faulty voltage data, finds undervoltage data, determines if trafo is suitable for battery
         """
         self.handle_voltage_data_names()
@@ -197,6 +214,7 @@ class Preprocess:
         self.crop_voltage_data()
         self.preprocess_voltages()
         self.get_undervoltage_data()
+        self.remove_asymetric_smms()
         suitable_for_battery = self.is_trafo_suitable_for_battery()
         return self.voltage_data, self.undervoltage_data, suitable_for_battery
 
