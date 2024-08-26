@@ -85,7 +85,7 @@ class BatteryModel:
                     dates_uv.append(date)
                 else:
                     print("Power is too high, setting to 0")
-                    print(sp_max, date)
+                    print(powers_list)
                     powers_slope.append(0)
                     dates_uv.append(date)
             else:
@@ -128,28 +128,28 @@ class BatteryModel:
                         vol1_diff = self.vol_lim*230 - vol1
                     except:
                         vol1 = self.vol_lim
-                        vol1_diff = -5000
+                        vol1_diff = -5000. # Unrealisticly big negative power, so it does not effect results
                     try:
                         vol2 = vol_state.loc[vol_state.smm ==
                                              smm].u_2.values[0]
                         vol2_diff = self.vol_lim*230 - vol2
                         if not np.isfinite(vol2):
                             vol2 = self.vol_lim
-                            vol2_diff = -5000
+                            vol2_diff = -5000.
 
                     except Exception as e:
                         vol2 = self.vol_lim
-                        vol2_diff = -5000
+                        vol2_diff = -5000.
                     try:
                         vol3 = vol_state.loc[vol_state.smm ==
                                              smm].u_3.values[0]
                         vol3_diff = self.vol_lim*230 - vol3
                         if not np.isfinite(vol3):
                             vol3 = self.vol_lim
-                            vol3_diff = -5000
+                            vol3_diff = -5000.
                     except:
                         vol3 = self.vol_lim
-                        vol3_diff = -5000
+                        vol3_diff = -5000.
                     # calculate power for each phase
                     p1 = vol1_diff / vol_slope /3
                     p2 = vol2_diff / vol_slope /3
@@ -171,13 +171,12 @@ class BatteryModel:
                             powers_list.append(p)
                         else:
                             # if only average voltage is fixed, we sum all powers
-                            p = p1 + p2 + p3
-                            powers_list.append(p)
+                            powers_list.append(p1 + p2 + p3)
                 # For needed power at certain datetime, we take the maximum power from all smms
                 
                 sp_max = max(powers_list)
                 # If power is unrealistic, we set it to 0
-                if sp_max < 100:
+                if sp_max < 150:
                     if charging:
                         if sp_max < soc*6:
                             sp_max = soc*6
@@ -191,7 +190,7 @@ class BatteryModel:
                     socs.append(soc)
                 else:
                     print("Power is too high, setting to 0")
-                    print(sp_max, date)
+                    print(sp_max)
                     powers_slope.append(0)
                     dates_uv.append(date)
                     socs.append(soc)

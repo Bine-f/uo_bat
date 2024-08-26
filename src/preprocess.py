@@ -7,7 +7,7 @@ class Preprocess:
         self.power_data = power_data
        
         self.minimal_vol = 150/230
-        self.max_diff = 50/230
+        self.max_diff = 30/230
         self.fillna_method = None
         self.df_vol = None
         self.df_p = None
@@ -187,6 +187,7 @@ class Preprocess:
         """Crops power data to one year"""
         self.power_data = self.power_data[(self.power_data.date_time >= self.start_date)]
         
+    
     def remove_smm_from_voltage_and_undevoltage_data(self, smm):
         """Removess smm from voltage and undervoltage data"""
         self.voltage_data = self.voltage_data[self.voltage_data.smm != smm]
@@ -217,5 +218,4 @@ class Preprocess:
         self.remove_asymetric_smms()
         suitable_for_battery = self.is_trafo_suitable_for_battery()
         return self.voltage_data, self.undervoltage_data, suitable_for_battery
-
     
