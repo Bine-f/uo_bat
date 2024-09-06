@@ -6,7 +6,7 @@ class Preprocess:
         self.voltage_data = voltage_data
         self.power_data = power_data
        
-        self.minimal_vol = 150/230
+        self.minimal_vol = 170/230
         self.max_diff = 30/230
         self.fillna_method = None
         self.df_vol = None

@@ -85,6 +85,7 @@ class DataLoader:
                                                        self.start, self.end)
         self.power_data = pd.read_sql(query, self._con())
         con.close()
+
     def load_voltage_data_from_sql(self):
         """Loads voltage data for all smms of given trafo network, for the given time period."""
         if self._con == None:
@@ -106,3 +107,75 @@ class DataLoader:
                                                        self.start, self.end)
         self.voltage_data = pd.read_sql(query, con)
         con.close()
+
+    def find_trafo_candidates(self):
+        """Creates a list of trafos that have undervoltages, and could be suitable for battery installation.
+        Returns a list of trafos that have at least 4 undervoltage events with at least 20 min of undervoltages in a row,
+        and data is not faulty"""
+        if self._con == None:
+            self._con = lambda: pyodbc.connect(self.con_string)
+        con = self._con()
+        query = """WITH VoltageEvents AS (
+            SELECT 
+                mpp.TransformatorskaPostajaNaziv,
+                mp.DatumUraCET,
+                CASE 
+                    WHEN COALESCE(mp.Napetost_L1, 208) < 207 THEN 1
+                    WHEN COALESCE(mp.Napetost_L2, 208) < 207 THEN 1
+                    WHEN COALESCE(mp.Napetost_L3, 208) < 207 THEN 1
+                    ELSE 0
+                END AS LowVoltageEvent,
+                CASE 
+                    WHEN COALESCE(mp.Napetost_L1, -1) >= COALESCE(mp.Napetost_L2, -1) AND COALESCE(mp.Napetost_L1, -1) >= COALESCE(mp.Napetost_L3, -1) THEN mp.Napetost_L1
+                    WHEN COALESCE(mp.Napetost_L2, -1) >= COALESCE(mp.Napetost_L1, -1) AND COALESCE(mp.Napetost_L2, -1) >= COALESCE(mp.Napetost_L3, -1) THEN mp.Napetost_L2
+                    ELSE mp.Napetost_L3
+                END AS MaxVoltage,
+                CASE 
+                    WHEN COALESCE(mp.Napetost_L1, 999999) <= COALESCE(mp.Napetost_L2, 999999) AND COALESCE(mp.Napetost_L1, 999999) <= COALESCE(mp.Napetost_L3, 999999) THEN mp.Napetost_L1
+                    WHEN COALESCE(mp.Napetost_L2, 999999) <= COALESCE(mp.Napetost_L1, 999999) AND COALESCE(mp.Napetost_L2, 999999) <= COALESCE(mp.Napetost_L3, 999999) THEN mp.Napetost_L2
+                    ELSE mp.Napetost_L3
+                END AS MinVoltage
+            FROM 
+                [DW_Star].[dbo].[FactKrivuljeNapetostiNMC] AS mp
+            JOIN 
+                [DW_Star].[dbo].[DimTransformatorskaPostaja] AS mpp
+                ON mp.TransformatorskaPostajaSID = mpp.TransformatorskaPostajaSID
+            WHERE 
+                mp.DatumVeljavnostiCETID >= '2023-03-03 00:00:00'
+                AND mp.DatumVeljavnostiCETID < '2024-03-03 00:00:00'
+            )
+            , EventPairs AS (
+                SELECT 
+                    ve1.TransformatorskaPostajaNaziv,
+                    ve1.DatumUraCET AS EventTime1,
+                    ve2.DatumUraCET AS EventTime2
+                FROM 
+                    VoltageEvents ve1
+                JOIN 
+                    VoltageEvents ve2
+                    ON ve1.TransformatorskaPostajaNaziv = ve2.TransformatorskaPostajaNaziv
+                    AND ve1.DatumUraCET <> ve2.DatumUraCET
+                    AND ABS(DATEDIFF(MINUTE, ve1.DatumUraCET, ve2.DatumUraCET)) = 10
+                WHERE 
+                    ve1.LowVoltageEvent = 1
+                    AND ve2.LowVoltageEvent = 1
+                    AND (ve1.MaxVoltage - ve1.MinVoltage) < 30
+                    AND ve1.MinVoltage > 170
+            )
+            SELECT 
+                TransformatorskaPostajaNaziv,
+                COUNT(DISTINCT EventTime1) AS EventCountWithNearbyInstances
+            FROM 
+                EventPairs
+            GROUP BY 
+                TransformatorskaPostajaNaziv
+            HAVING 
+                COUNT(DISTINCT EventTime1) >= 4
+            ORDER BY 
+                EventCountWithNearbyInstances DESC, TransformatorskaPostajaNaziv""".format(
+            self.start, self.end)
+        trafos_df = pd.read_sql(query, con)
+        con.close()
+        trafos_list = list(trafos_df["TransformatorskaPostajaNaziv"])
+        trafos_list.reverse()
+        return trafos_list

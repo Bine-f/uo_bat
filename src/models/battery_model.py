@@ -85,7 +85,7 @@ class BatteryModel:
                     dates_uv.append(date)
                 else:
                     print("Power is too high, setting to 0")
-                    print(powers_list)
+                    print(sp_max)
                     powers_slope.append(0)
                     dates_uv.append(date)
             else:
@@ -173,7 +173,7 @@ class BatteryModel:
                             # if only average voltage is fixed, we sum all powers
                             powers_list.append(p1 + p2 + p3)
                 # For needed power at certain datetime, we take the maximum power from all smms
-                
+                df_powers_state = pd.DataFrame({"smm": self.smms, "power": powers_list}) 
                 sp_max = max(powers_list)
                 # If power is unrealistic, we set it to 0
                 if sp_max < 150:

@@ -210,7 +210,14 @@ def get_opt_res_f(snet, state_vol, smms_feeder, x0=1., t0=0.425):
 
     return res.x[0]
 
-def calibrate_snet(snet, state_vol, smms_feeder, plot=False, x0=1., t0=0.425, calculate_res_f=True):
+
+def calibrate_snet(snet,
+                   state_vol,
+                   smms_feeder,
+                   plot=False,
+                   x0=1.,
+                   t0=0.425,
+                   calculate_res_f=True):
     """
     Calculates the optimal resistance factor and transformer voltage level for the network.
 
@@ -240,16 +247,20 @@ def calibrate_snet(snet, state_vol, smms_feeder, plot=False, x0=1., t0=0.425, ca
     if plot:
         run_powerflow(snet, res_factor=x0, trafo_lv=opt_trafo_lv)
         volts = set_volts(snet, state_vol, warn=False)
-        plot_feeder_volts(volts, smms_feeder,
-                   title="Before calibration")
-    run_powerflow(snet, res_factor=x0, trafo_lv = t0)
+        plot_feeder_volts(volts, smms_feeder, title="Before calibration")
+    run_powerflow(snet, res_factor=x0, trafo_lv=t0)
     volts = set_volts(snet, state_vol, warn=False)
     min_bus = find_min_bus(snet, state_vol, volts)
     id_first = find_id_first(snet, state_vol, min_bus)
     if calculate_res_f == True and len(smms_feeder) > 2:
         try:
             #Calculate res_f using min_bus and id_first
-            opt_res_f = get_opt_res_f(snet, min_bus, id_first, state_vol, x0=x0, t0 = t0)
+            opt_res_f = get_opt_res_f(snet,
+                                      min_bus,
+                                      id_first,
+                                      state_vol,
+                                      x0=x0,
+                                      t0=t0)
         except:
             opt_res_f = 1.
 
@@ -263,25 +274,33 @@ def calibrate_snet(snet, state_vol, smms_feeder, plot=False, x0=1., t0=0.425, ca
             if plot:
                 run_powerflow(snet, res_factor=opt_res_f, trafo_lv=t0)
                 volts = set_volts(snet, state_vol, warn=False)
-                plot_feeder_volts(volts, smms_feeder, title="After res_f calibration")
+                plot_feeder_volts(volts,
+                                  smms_feeder,
+                                  title="After res_f calibration")
         else:
             if plot:
-                run_powerflow(snet, res_factor=opt_res_f, trafo_lv = t0)
+                run_powerflow(snet, res_factor=opt_res_f, trafo_lv=t0)
                 volts = set_volts(snet, state_vol, warn=False)
-                plot_feeder_volts(volts, smms_feeder, min_bus, id_first,
-                           title="After res_f calibration")
+                plot_feeder_volts(volts,
+                                  smms_feeder,
+                                  min_bus,
+                                  id_first,
+                                  title="After res_f calibration")
     else:
         opt_res_f = 1.
     try:
 
-        opt_trafo_lv = get_opt_trafo_lv(snet, opt_res_f, min_bus, state_vol, t0)
+        opt_trafo_lv = get_opt_trafo_lv(snet, opt_res_f, min_bus, state_vol,
+                                        t0)
     except:
         opt_trafo_lv = t0
         print("Trafo_lv optimization failed")
     if plot:
         run_powerflow(snet, res_factor=opt_res_f, trafo_lv=opt_trafo_lv)
         volts = set_volts(snet, state_vol, warn=False)
-        plot_feeder_volts(volts, smms_feeder, title="After trafo_lv calibration")
+        plot_feeder_volts(volts,
+                          smms_feeder,
+                          title="After trafo_lv calibration")
     return opt_trafo_lv, opt_res_f
 
 
@@ -352,12 +371,16 @@ def calculate_slopes(snet,
             populate_snet(snet, state_p, state_q, warn=False)
             # calibration
             if calibrate:
-                opt_trafo_lv, res_f = calibrate_snet(snet,
+                try:
+                    opt_trafo_lv, res_f = calibrate_snet(snet,
                                                      state_vol,
                                                      smms_feeder,
                                                      x0=1.,
                                                      t0=0.425,
                                                      plot=plot)
+                except:
+                    opt_trafo_lv = 0.425
+                    res_f = 1.
             else:
                 opt_trafo_lv = 0.425
                 res_f = 1.
