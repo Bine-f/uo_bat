@@ -30,28 +30,21 @@ def sanitize_df(df):
 
 @app.post("/get_results/")
 @app.get("/get_results/")
-def get_results(create_trafo_results: bool = False,
-                create_battery_results: bool = True,
+def get_results(
                 number_of_trafos: int = None):
     """
     Finds transformer candidates and determines optimal battery parameters for each feeder.
      Args:
         -------- 
-            create_trafo_results: bool
-                if True, results for all feeders will be saved, for each transformer
-            create_battery_results: bool
-                if True, results for feeders suitable for battery will be saved
+          
             number_of_trafos: int
                 number of transformers to process
 
         Returns:
         --------
-            If create_trafo_results is True:
-                List of dictionaries, each containing results for a single feeder
-            If create_battery_results is True:
-                List of dictionaries, each containing results for a single feeder
-            If create_trafo_results and create_battery_results are False:
-                Dictionary with message "Processing completed"
+          
+            dictionary with results for feeders, where battery is needed
+            
     """
     try:
 
@@ -63,21 +56,20 @@ def get_results(create_trafo_results: bool = False,
         # trafos_list = ["T348- TAVČARJEVA"]
         print(trafos_list)
         # Initialize empty dataframes to store results
-        res_df = pd.DataFrame() if create_trafo_results else None
-        battery_res = pd.DataFrame() if create_battery_results else None
+    
+        battery_res = pd.DataFrame()
         time0 = time.time()
 
         # Loop through each transformer in the trafo list
         for TRAFO_NAME in trafos_list:
             print(TRAFO_NAME)
-            if create_trafo_results:
-                trafo_res_df = pd.DataFrame()
+           
             trafo_name = TRAFO_NAME
 
             try:
                 # DataLoader loads the voltage and power data
                 dl = DataLoader(load_manual=False,
-                                trafo_name=trafo_name[:6],
+                                trafo_name=trafo_name,
                                 start=one_year_ago,
                                 end=last_midnight)
 
@@ -100,58 +92,27 @@ def get_results(create_trafo_results: bool = False,
                         fm = FeederModel(tm, feeder)
                         fm.calculate_uv_data_and_slopes()
 
-                        if create_trafo_results:
-                            bm = BatteryModel(fm)
-                            bm.calculate_battery_parameters()
-                            trafo_res_df = pd.concat(
-                                [trafo_res_df, fm.feeder_res],
-                                ignore_index=True)
 
-                        if create_battery_results and fm.suitable_for_battery:
+                        if fm.suitable_for_battery:
                             bm = BatteryModel(fm)
                             bm.calculate_battery_parameters()
                             battery_res = pd.concat(
                                 [battery_res, fm.feeder_res],
                                 ignore_index=True)
 
-                else:
-                    if create_trafo_results:
-                        tm = TrafoModel(voltage_data, undervoltage_data, None,
-                                        None, None, trafo_name,
-                                        config.NET_PATH)
-                        tm.create_and_populate_snet()
-
-                        for feeder in tm.feeders:
-                            fm = FeederModel(tm, feeder)
-                            fm.calculate_and_write_uv_data(
-                                empty_battery_columns=True)
-                            trafo_res_df = pd.concat(
-                                [trafo_res_df, fm.feeder_res],
-                                ignore_index=True)
-
-                if create_trafo_results:
-                    res_df = pd.concat([res_df, trafo_res_df],
-                                       ignore_index=True)
+            
             
             except Exception as e:
-               print(e, "Error processing transformer"+ trafo_name)
-            if create_battery_results:
-                sanitized_battery_res = sanitize_df(battery_res)                
-                battery_res.to_csv("battery_res.csv")
-        if create_battery_results:
-            sanitized_battery_res = sanitize_df(battery_res)
-            print(f"Processing completed in {time.time() - time0} seconds.")
+               print(e, "Error processing transformer "+ trafo_name)
+            
+            sanitized_battery_res = sanitize_df(battery_res)                
             battery_res.to_csv("battery_res.csv")
-            return sanitized_battery_res.to_dict(
-                orient="records"), res_df.to_dict(orient="records")
-        elif create_trafo_results:
-            sanitized_res_df = sanitize_df(res_df)
-            print(f"Processing completed in {time.time() - time0} seconds.")
-            res_df.to_csv("res_df.csv")
-            return sanitized_res_df.to_dict(orient="records")
+        
+        
         print(f"Processing completed in {time.time() - time0} seconds.")
-        return {"message": "Processing completed"}
-
+        return sanitized_battery_res.to_dict(
+            orient="records")
+       
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
