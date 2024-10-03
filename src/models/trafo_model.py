@@ -16,7 +16,8 @@ class TrafoModel:
         self.feeders = None
         self.trafo_res_df = pd.DataFrame()
         self.snet = None
-        self.enough_voltage_data = self.is_there_enough_voltage_data()
+        if self.voltage_data is not None:
+            self.enough_voltage_data = self.is_there_enough_voltage_data()
 
     
     def create_snet(self):
