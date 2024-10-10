@@ -34,7 +34,8 @@ create_battery_results = True #If True, results for feeders suitable for battery
 # dl = DataLoader()
 # trafos_list = dl.find_trafo_candidates()
 # print(trafos_list)
-trafos_list = ["T348- TAVČARJEVA"]
+r"C:\Users\binef\EG\uo_bat\src"
+trafos_list = ["T0182 TENETIŠE"]
 # trafos_list = ["T0948 USKOVNIK",  "T0068 DRAŽGOŠE", "T1195 VOGLJE KABELSKA", "T0107 BINKELJ",  "T0497 KRŽIŠE", "T369- VRTEC BLED", "T0483 BLEJC", "T0320 TRSTENIK JAMBOR", "T069- LAZE", "T494- DOLENJE BREZJE", "T0330 NEMILJE", "T051- LIPNICA", "T0309 JAMA", "T0039 LETENCE", "T0427 APNO", "T0648 OŽBOLT", "T0445 BESNICA ČEPULJE", "T0395 POVLJE", "T0015 ZGORNJE STRUŽEVO", "T1157 JELENDOL", "T0675 PRESKA TRŽIČ"]
 res_df = pd.DataFrame()
 if create_battery_results:
@@ -46,38 +47,61 @@ for TRAFO_NAME in trafos_list:
     trafo_name = TRAFO_NAME
     print(trafo_name)
     # try:
-    dl = DataLoader(load_manual=False,
-                    trafo_name=trafo_name[:6],
+    dl = DataLoader(load_manual=True,
+                    trafo_name=trafo_name,
+                    folder_path= r"C:\Users\binef\EG\uo_bat\src\T0182 TENETIŠE",
                     start = one_year_ago,
                     end = last_midnight)
     voltage_data = dl.load_voltage_data()
     pr = Preprocess(voltage_data)
-    voltage_data, undervoltage_data, trafo_suitable_for_battery = pr.preprocess_voltage_data_get_undervoltages()
-    if trafo_suitable_for_battery:
+    voltage_data, undervoltage_data, overvoltage_data, trafo_suitable_for_battery_under, trafo_suitable_for_battery_over = pr.preprocess_voltage_data_get_under_over_voltages()
+    smms_uniq = voltage_data.smm.unique()
+    print(smms_uniq)
+    print(len(voltage_data),len(undervoltage_data), len(overvoltage_data))
+    if trafo_suitable_for_battery_under or trafo_suitable_for_battery_over:
+        print("Trafo needs battery")
         # There are undervoltages, we need to fix
         power_data = dl.load_power_data()
         df_vol, df_p, df_q = pr.preprocess_powers_create_pivot_tables(
             power_data)
 
-        tm = TrafoModel(voltage_data, undervoltage_data, df_vol, df_p,
+        tm = TrafoModel(voltage_data, undervoltage_data, overvoltage_data, df_vol, df_p,
                         df_q, trafo_name, NET_PATH)
 
         tm.create_and_populate_snet()
-        for feeder in tm.feeders:
-            fm = FeederModel(tm, feeder)
-            fm.calculate_uv_data_and_slopes()
-            if create_trafo_results:
-                bm = BatteryModel(fm)
-                bm.calculate_battery_parameters()
-                trafo_res_df = pd.concat([trafo_res_df, fm.feeder_res],
-                                         ignore_index=True)
-
-            else:
-                if fm.suitable_for_battery:
+        if trafo_suitable_for_battery_under:
+            print("There are undervoltages")
+            for feeder in tm.feeders:
+                fm = FeederModel(tm, feeder)
+                fm.calculate_uv_data_and_slopes(over = False)
+                if create_trafo_results:
                     bm = BatteryModel(fm)
                     bm.calculate_battery_parameters()
-                    battery_res = pd.concat([battery_res, fm.feeder_res],
-                                            ignore_index=True)
+                    trafo_res_df = pd.concat([trafo_res_df, fm.feeder_res],
+                                             ignore_index=True)
+
+                else:
+                    if fm.suitable_for_battery:
+                        bm = BatteryModel(fm)
+                        bm.calculate_battery_parameters()
+                        battery_res = pd.concat([battery_res, fm.feeder_res],
+                                                ignore_index=True)
+        if trafo_suitable_for_battery_over:
+            for feeder in tm.feeders:
+                fm = FeederModel(tm, feeder)
+                fm.calculate_ov_data_and_slopes()
+                if create_trafo_results:
+                    bm = BatteryModel(fm)
+                    bm.calculate_battery_parameters()
+                    trafo_res_df = pd.concat([trafo_res_df, fm.feeder_res],
+                                             ignore_index=True)
+
+                else:
+                    if fm.suitable_for_battery:
+                        bm = BatteryModel(fm)
+                        bm.calculate_battery_parameters()
+                        battery_res = pd.concat([battery_res, fm.feeder_res],
+                                                ignore_index=True)
         if create_battery_results:
             print(battery_res)
     else:

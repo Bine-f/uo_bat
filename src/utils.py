@@ -61,12 +61,19 @@ def get_dates_from_df(df):
     """Returns dates from dataframe"""
     return df["date_time"].unique()
 
-def limit_voltage(vol_df, lim_vol=0.9, average=False):
+def limit_voltage(vol_df, lim_vol=0.9, over = False, average=False):
     """In voltage_data data, limit voltage to lim_vol"""
-    if average:
-        return(vol_df[(vol_df["avg_u"] <= lim_vol)])
+    if over:
+        if average:
+            return(vol_df[(vol_df["avg_u"] >= lim_vol)])
+        else:
+            return(vol_df[(vol_df["max_u"] >= lim_vol)])
     else:
-        return(vol_df[(vol_df["min_u"] <= lim_vol)])
+        if average:
+            return(vol_df[(vol_df["avg_u"] <= lim_vol)])
+        else:
+            return(vol_df[(vol_df["min_u"] <= lim_vol)])
+    
     
 def create_network(json_path):
 	net = pp.from_json(json_path)

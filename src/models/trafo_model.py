@@ -5,7 +5,7 @@ from utils import *
 from subnet_creation import Subnet
 
 class TrafoModel:
-    def __init__(self, voltage_data, undervoltage_data, df_vol, df_p, df_q,  trafo_name, network_path):
+    def __init__(self, voltage_data, undervoltage_data, overvoltage_data, df_vol, df_p, df_q,  trafo_name, network_path):
         self.voltage_data = voltage_data
         self.undervoltage_data = undervoltage_data
         self.df_vol = df_vol
@@ -16,6 +16,8 @@ class TrafoModel:
         self.feeders = None
         self.trafo_res_df = pd.DataFrame()
         self.snet = None
+       
+        self.overvoltage_data = overvoltage_data
         if self.voltage_data is not None:
             self.enough_voltage_data = self.is_there_enough_voltage_data()
 

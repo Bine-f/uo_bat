@@ -150,6 +150,7 @@ class Preprocess:
         """
         if lim_vol != None:
             undervoltage_data = limit_voltage(self.voltage_data.copy(), lim_vol = lim_vol, average = False)
+            print(1, len(undervoltage_data))
         undervoltage_data.sort_values(by=["smm", "date_time"], inplace=True)
         undervoltage_data["timedelta"] = undervoltage_data.groupby("smm")["date_time"].diff()
         if remove_single_occurences:
@@ -159,12 +160,39 @@ class Preprocess:
             undervoltage_data_20_min = undervoltage_data
         self.undervoltage_data = undervoltage_data_20_min
 
+    def get_overvoltage_data(self, lim_vol=1.1, remove_single_occurences=True):
+        """Asigns dataframe with overvoltage data
+        Args:
+        --------
+            lim_vol:
+               Voltage, above which we consider it overvoltage
+            remove_single_occurences:
+                if True, overvoltage must occur at least twice in a row
+        """
+        if lim_vol != None:
+            overvoltage_data = limit_voltage(self.voltage_data.copy(), lim_vol = lim_vol, limit_high = True, average = False)
+        overvoltage_data.sort_values(by=["smm", "date_time"], inplace=True)
+        overvoltage_data["timedelta"] = overvoltage_data.groupby("smm")["date_time"].diff()
+        if remove_single_occurences:
+            overvoltage_data_20_min = overvoltage_data[(overvoltage_data["timedelta"] == pd.Timedelta("10 minutes")) | (
+                overvoltage_data["timedelta"].shift(-1) == pd.Timedelta("10 minutes"))]
+        else:
+            overvoltage_data_20_min = overvoltage_data
+        self.overvoltage_data = overvoltage_data_20_min
+
     def is_trafo_suitable_for_battery(self):
         """Returns True if there are more than 4 datetimes with undervoltage in voltage data"""
         if self.undervoltage_data is None:
             return False
         else:
             return len(self.undervoltage_data["date_time"].unique()) >= 4
+        
+    def is_trafo_suitable_for_battery_over(self):
+        """Returns True if there are more than 4 datetimes with overvoltage in voltage data"""
+        if self.overvoltage_data is None:
+            return False
+        else:
+            return len(self.overvoltage_data["date_time"].unique()) >= 4
 
     def preprocess_data(self):
         """preprocesses voltage, energy and transformer data, removes faulty voltage data
@@ -173,6 +201,7 @@ class Preprocess:
         self.handle_names()
         self.crop_power_data()
         self.preprocess_voltages()
+        
         self.create_pivot_tables()        
         self.get_undervoltage_data()
         return self.voltage_data, self.undervoltage_data, self.df_vol, self.df_p, self.df_q
@@ -207,15 +236,18 @@ class Preprocess:
                 self.remove_smm_from_voltage_and_undevoltage_data(smm)
                 print(f"Removed smm {smm} from voltage and undervoltage data")
 
-    def preprocess_voltage_data_get_undervoltages(self):
+    def preprocess_voltage_data_get_under_over_voltages(self):
         """preprocesses voltage data, removes faulty voltage data, finds undervoltage data, determines if trafo is suitable for battery
         """
         self.handle_voltage_data_names()
         # self.crop_to_one_year()
         self.crop_voltage_data()
         self.preprocess_voltages()
+        print(0, len(self.voltage_data))
         self.get_undervoltage_data()
+        self.get_overvoltage_data()
         self.remove_asymetric_smms()
         suitable_for_battery = self.is_trafo_suitable_for_battery()
-        return self.voltage_data, self.undervoltage_data, suitable_for_battery
+        suitable_for_battery_over = self.is_trafo_suitable_for_battery_over()
+        return self.voltage_data, self.undervoltage_data, self.overvoltage_data, suitable_for_battery, suitable_for_battery_over
     

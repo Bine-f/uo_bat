@@ -19,6 +19,7 @@ class DataLoader:
             self.trafo_name = config.TRAFO_NAME
         else:
             self.trafo_name = trafo_name
+        print(self.trafo_name)
         self.load_manual = load_manual
         self.voltage_data = None
         self.power_data = None
